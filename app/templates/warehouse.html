@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Склад — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="container" style="background-color: #000; color: #fff; min-height: 90vh;">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Склад</h2>
+  <button class="btn border border-primary text-primary" id="add-tool-btn">Добавить инструмент</button>
+</div>
+
+<div id="add-tool-form" class="card p-3 d-none mb-4 bg-black text-white">
+  <div class="mb-3">
+    <input type="text" id="tool-name" class="form-control bg-dark text-white border-0" placeholder="Название инструмента" required>
+  </div>
+  <div class="mb-3">
+    <input type="number" id="tool-price" class="form-control bg-dark text-white border-0" placeholder="Цена (необязательно)">
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-success" id="save-tool-btn">Сохранить</button>
+    <button class="btn btn-secondary" id="cancel-add-tool-btn">Отмена</button>
+  </div>
+</div>
+
+<h3>Инструменты на складе</h3>
+<ul class="list-group mb-4" id="tool-list">
+  {% for tool in tools if tool.site_id is none %}
+    <li class="list-group-item mb-2" style="background-color: #111; border: none; color: #fff;">
+      {{ tool.name }}{% if tool.price %} — <span class="text-muted">{{ tool.price }} ₽</span>{% endif %}
+    </li>
+  {% else %}
+    <li class="list-group-item bg-black text-white">Склад пуст</li>
+  {% endfor %}
+</ul>
+
+<h3 class="mt-4">Перемещения</h3>
+<ul class="list-group">
+  {% for tr in transfers %}
+    <li class="list-group-item mb-2" style="background-color: #111; border: none; color: #fff;">
+      {{ tr.tool.name }}: {{ tr.from_site.name if tr.from_site else 'Склад' }} → {{ tr.to_site.name if tr.to_site else 'Склад' }} ({{ tr.date_value }})
+    </li>
+  {% else %}
+    <li class="list-group-item bg-black text-white">Нет перемещений</li>
+  {% endfor %}
+</ul>
+
+</div>
+
+<div id="toast-container" style="position: fixed; top: 1rem; right: 1rem; z-index: 9999;"></div>
+
+<script>
+const addToolBtn = document.getElementById('add-tool-btn');
+const addToolForm = document.getElementById('add-tool-form');
+const saveToolBtn = document.getElementById('save-tool-btn');
+const cancelAddToolBtn = document.getElementById('cancel-add-tool-btn');
+const toolList = document.getElementById('tool-list');
+
+addToolBtn?.addEventListener('click', () => {
+  addToolForm.classList.remove('d-none');
+  addToolBtn.classList.add('d-none');
+});
+
+cancelAddToolBtn?.addEventListener('click', () => {
+  addToolForm.classList.add('d-none');
+  addToolBtn.classList.remove('d-none');
+});
+
+saveToolBtn?.addEventListener('click', async () => {
+  const name = document.getElementById('tool-name').value.trim();
+  const price = document.getElementById('tool-price').value.trim();
+
+  if (!name) {
+    showToast('Название обязательно.', true);
+    return;
+  }
+
+  try {
+    const response = await authorizedFetch('/api/tools', {
+      method: 'POST',
+      body: JSON.stringify({ name, price: price ? parseFloat(price) : null })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const li = document.createElement('li');
+      li.className = 'list-group-item mb-2';
+      li.style.backgroundColor = '#111';
+      li.style.border = 'none';
+      li.style.color = '#fff';
+      li.textContent = `${data.name}${data.price ? ` — ${data.price} ₽` : ''}`;
+      toolList.appendChild(li);
+
+      document.getElementById('tool-name').value = '';
+      document.getElementById('tool-price').value = '';
+      addToolForm.classList.add('d-none');
+      addToolBtn.classList.remove('d-none');
+      showToast('Инструмент добавлен.');
+    } else {
+      showToast('Ошибка при добавлении.', true);
+    }
+  } catch (error) {
+    showToast('Ошибка сети.', true);
+  }
+});
+
+function showToast(message, isError = false) {
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white ${isError ? 'bg-danger' : 'bg-success'} border-0 show`;
+  toast.role = 'alert';
+  toast.style.minWidth = '200px';
+  toast.style.padding = '0.75rem 1rem';
+  toast.style.marginBottom = '0.5rem';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  document.getElementById('toast-container').appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

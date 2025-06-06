@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4">
+  <h2 class="mb-4">Расходы и Зарплаты</h2>
+
+  <!-- Фильтры -->
+  <div class="row g-3 align-items-center mb-3">
+    <div class="col-auto">
+      <select id="siteFilter" class="form-select bg-dark text-white border-0">
+        <option value="">Все объекты</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <select id="typeFilter" class="form-select bg-dark text-white border-0">
+        <option value="">Все типы</option>
+        <option value="purchase">Закупка</option>
+        <option value="salary">Зарплата</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Блок данных -->
+  <div id="expensesList"></div>
+</div>
+
+<script>
+let allExpenses = [];
+
+async function loadExpenses() {
+  const response = await authorizedFetch('/api/expenses/');
+  if (response.status === 401) {
+    window.location.href = "/login";
+    return;
+  }
+
+  if (response.ok) {
+    allExpenses = await response.json();
+    renderExpenses();
+  } else {
+    showToast('Ошибка загрузки расходов', true);
+  }
+}
+
+async function loadSites() {
+  const response = await authorizedFetch('/api/sites/');
+  if (response.status === 401) {
+    window.location.href = "/login";
+    return;
+  }
+
+  if (response.ok) {
+    const sites = await response.json();
+    const filter = document.getElementById("siteFilter");
+    sites.forEach(site => {
+      const opt = document.createElement("option");
+      opt.value = site.id;
+      opt.textContent = site.name;
+      filter.appendChild(opt);
+    });
+  }
+}
+
+function renderExpenses() {
+  const siteId = document.getElementById("siteFilter").value;
+  const type = document.getElementById("typeFilter").value;
+  const container = document.getElementById("expensesList");
+  container.innerHTML = "";
+
+  const filtered = allExpenses.filter(e => {
+    if (siteId && e.site_id != siteId) return false;
+    if (type && e.type != type) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = "<p class='text-muted'>Нет данных</p>";
+    return;
+  }
+
+  const grouped = {};
+  for (const e of filtered) {
+    const date = e.date.split("T")[0];
+    if (!grouped[date]) grouped[date] = [];
+    grouped[date].push(e);
+  }
+
+  Object.keys(grouped).sort().reverse().forEach(date => {
+    const group = grouped[date];
+    const dayBlock = document.createElement("div");
+    dayBlock.classList.add("mb-4");
+
+    const title = document.createElement("h5");
+    title.textContent = new Date(date).toLocaleDateString();
+    dayBlock.appendChild(title);
+
+    const list = document.createElement("ul");
+    list.className = "list-group list-group-flush";
+
+    group.forEach(item => {
+      const li = document.createElement("li");
+      li.className = "list-group-item bg-transparent text-white d-flex justify-content-between align-items-center";
+      li.innerHTML = `
+        <span>
+          ${item.type === 'purchase' ? '🛒' : '💸'}
+          ${item.comment || 'Без комментария'}
+          ${item.site_name ? ` | ${item.site_name}` : ''}
+        </span>
+        <span class="fw-bold">${item.amount.toFixed(2)} ₽</span>
+      `;
+      list.appendChild(li);
+    });
+
+    dayBlock.appendChild(list);
+    container.appendChild(dayBlock);
+  });
+}
+
+// Инициализация
+document.getElementById("siteFilter").addEventListener("change", renderExpenses);
+document.getElementById("typeFilter").addEventListener("change", renderExpenses);
+
+loadSites();
+loadExpenses();
+</script>
+
+{% endblock %}

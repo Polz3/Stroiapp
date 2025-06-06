@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Объекты — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="container" style="background-color: #000; color: #fff; min-height: 90vh;">
+
+<div class="d-flex flex-wrap gap-2 justify-content-start align-items-center mb-4">
+  <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#createSiteModal">Добавить объект</button>
+  <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#createSubgroupModal">Создать подгруппу</button>
+  <a href="/sites/archive" class="btn btn-outline-light">Архив</a>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4 mb-2">
+    <select id="subgroupSelect" class="form-select bg-dark text-white border-0">
+      <option value="all">Все подгруппы</option>
+    </select>
+  </div>
+  <div class="col-md-8">
+    <input type="text" id="searchInput" class="form-control bg-dark text-white border-0" placeholder="Поиск по названию...">
+  </div>
+</div>
+
+<div class="list-group" id="siteList"></div>
+
+<!-- Модалка создания объекта -->
+<div class="modal fade" id="createSiteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content bg-black text-white" id="createSiteForm">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Новый объект</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Название объекта</label>
+          <input required name="name" class="form-control bg-dark text-white border-0" placeholder="Введите название объекта">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Адрес объекта</label>
+          <input name="address" class="form-control bg-dark text-white border-0" placeholder="Введите адрес (необязательно)">
+        </div>
+      </div>      
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-primary">Создать</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Модалка создания подгруппы -->
+<div class="modal fade" id="createSubgroupModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content bg-black text-white" id="createSubgroupForm">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Новая подгруппа</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input required name="name" class="form-control bg-dark text-white border-0" placeholder="Название подгруппы">
+      </div>   
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-primary">Создать</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/static/js/script.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    let allSites = [];
+  
+    async function loadSites() {
+      const response = await authorizedFetch('/api/sites/');
+      if (response.ok) {
+        allSites = await response.json();
+        renderSites();
+        await renderSubgroups();
+      } else {
+        showToast('Ошибка загрузки объектов', true);
+      }
+    }
+  
+    function renderSites() {
+      const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+      const subgroup = document.getElementById('subgroupSelect')?.value || 'all';
+      const siteList = document.getElementById('siteList');
+      siteList.innerHTML = '';
+  
+      allSites
+        .filter(site =>
+          site.name.toLowerCase().includes(search) &&
+          (subgroup === 'all' || site.subgroup_id == subgroup)
+        )
+        .forEach(site => {
+          const a = document.createElement('a');
+          a.href = `/sites/${site.id}`;
+          a.className = 'list-group-item list-group-item-action mb-2';
+          a.style.backgroundColor = '#111';
+          a.style.color = '#fff';
+          a.textContent = site.name;
+          siteList.appendChild(a);
+        });
+    }
+  
+    async function renderSubgroups() {
+      const subgroupSelect = document.getElementById('subgroupSelect');
+      const selectedValue = subgroupSelect.value;
+  
+      subgroupSelect.innerHTML = '<option value="all">Все подгруппы</option>';
+  
+      const response = await authorizedFetch('/api/subgroups/');
+      if (response.ok) {
+        const subgroups = await response.json();
+  
+        subgroups.sort((a, b) => a.name.localeCompare(b.name));
+  
+        subgroups.forEach(subgroup => {
+          const option = document.createElement('option');
+          option.value = subgroup.id;
+          option.textContent = subgroup.name;
+          subgroupSelect.appendChild(option);
+        });
+      }
+  
+      subgroupSelect.value = selectedValue;
+    }
+  
+    const createSiteForm = document.getElementById('createSiteForm');
+createSiteForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(createSiteForm);
+  
+  const response = await authorizedFetch('/api/sites', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (response.ok) {
+    showToast('Объект успешно создан');
+    const modal = bootstrap.Modal.getInstance(document.getElementById('createSiteModal'));
+    modal.hide();
+    createSiteForm.reset();
+    await loadSites();
+  } else {
+    showToast('Ошибка создания объекта', true);
+  }
+});
+  
+    const createSubgroupForm = document.getElementById('createSubgroupForm');
+    createSubgroupForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const nameInput = createSubgroupForm.querySelector('input[name="name"]');
+      const name = nameInput.value.trim();
+  
+      if (!name) {
+        showToast('Введите название подгруппы', true);
+        return;
+      }
+  
+      const response = await authorizedFetch('/api/subgroups/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+  
+      if (response.ok) {
+        const newSubgroup = await response.json();
+  
+        showToast('Подгруппа успешно создана');
+        const modal = bootstrap.Modal.getInstance(document.getElementById('createSubgroupModal'));
+        modal.hide();
+        createSubgroupForm.reset();
+  
+        await renderSubgroups();
+        document.getElementById('subgroupSelect').value = String(newSubgroup.id);  // авто-выбор
+        renderSites();
+      } else {
+        const error = await response.json().catch(() => ({}));
+        showToast('Ошибка создания подгруппы: ' + (error.detail || 'неизвестная ошибка'), true);
+      }
+    });
+  
+    document.getElementById('searchInput')?.addEventListener('input', renderSites);
+    document.getElementById('subgroupSelect')?.addEventListener('change', renderSites);
+  
+    loadSites();
+  });
+  
+  function showToast(message, isError = false) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.className = `toast-message ${isError ? 'bg-danger' : 'bg-success'} text-white p-2 rounded position-fixed top-0 end-0 m-3 shadow`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  </script>
+  
+
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Сотрудники — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="container" style="background-color: #000; color: #fff; min-height: 90vh;">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Сотрудники</h2>
+  <button class="btn border border-primary text-primary" id="add-worker-btn">Добавить сотрудника</button>
+</div>
+
+<form method="get" action="/workers" class="d-flex gap-2 mb-4">
+  <select name="site_id" class="form-select bg-dark text-white border-0">
+    <option value="">Все объекты</option>
+    {% for s in sites %}
+      <option value="{{ s.id }}" {% if selected_site==s.id %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="search" placeholder="Поиск по имени" class="form-control bg-dark text-white border-0" value="{{ search }}">
+  <button type="submit" class="btn btn-outline-primary">Применить</button>
+</form>
+
+<div id="add-worker-form" class="card p-3 d-none mb-4 bg-black text-white">
+  <div class="mb-3">
+    <input type="text" id="worker-name" class="form-control bg-dark text-white border-0" placeholder="Имя сотрудника" required>
+  </div>
+  <div class="mb-3">
+    <input type="text" id="worker-phone" class="form-control bg-dark text-white border-0" placeholder="Телефон (необязательно)">
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-success" id="save-worker-btn">Сохранить</button>
+    <button class="btn btn-secondary" id="cancel-add-worker-btn">Отмена</button>
+  </div>
+</div>
+
+<ul class="list-group" id="worker-list">
+  {% for w in workers %}
+    <li class="list-group-item mb-2" style="background-color: #111; border: none;">
+      <a href="/workers/{{ w.id }}/card" class="text-white text-decoration-none">{{ w.name }}</a> — <span class="text-muted">{{ w.phone_number or 'нет телефона' }}</span>
+    </li>
+  {% else %}
+    <li class="list-group-item bg-black text-white">Нет сотрудников</li>
+  {% endfor %}
+</ul>
+</div>
+
+<div id="toast-container" style="position: fixed; top: 1rem; right: 1rem; z-index: 9999;"></div>
+
+<script>
+const addWorkerBtn = document.getElementById('add-worker-btn');
+const addWorkerForm = document.getElementById('add-worker-form');
+const saveWorkerBtn = document.getElementById('save-worker-btn');
+const cancelAddWorkerBtn = document.getElementById('cancel-add-worker-btn');
+const workerList = document.getElementById('worker-list');
+
+addWorkerBtn?.addEventListener('click', () => {
+  addWorkerForm.classList.remove('d-none');
+  addWorkerBtn.classList.add('d-none');
+});
+
+cancelAddWorkerBtn?.addEventListener('click', () => {
+  addWorkerForm.classList.add('d-none');
+  addWorkerBtn.classList.remove('d-none');
+});
+
+saveWorkerBtn?.addEventListener('click', async () => {
+  const name = document.getElementById('worker-name').value.trim();
+  const phone_number = document.getElementById('worker-phone').value.trim();
+
+  if (!name) {
+    showToast('Имя обязательно.', true);
+    return;
+  }
+
+  try {
+    const response = await authorizedFetch('/api/workers', {
+      method: 'POST',
+      body: JSON.stringify({ name, phone_number })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const li = document.createElement('li');
+      li.className = 'list-group-item mb-2';
+      li.style.backgroundColor = '#111';
+      li.style.border = 'none';
+      li.innerHTML = `<a href="/workers/${data.id}/card" class="text-white text-decoration-none">${data.name}</a> — <span class="text-muted">${data.phone_number || 'нет телефона'}</span>`;
+      workerList.appendChild(li);
+
+      document.getElementById('worker-name').value = '';
+      document.getElementById('worker-phone').value = '';
+      addWorkerForm.classList.add('d-none');
+      addWorkerBtn.classList.remove('d-none');
+      showToast('Сотрудник добавлен.');
+    } else {
+      showToast('Ошибка при добавлении.', true);
+    }
+  } catch (error) {
+    showToast('Ошибка сети.', true);
+  }
+});
+
+function showToast(message, isError = false) {
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white ${isError ? 'bg-danger' : 'bg-success'} border-0 show`;
+  toast.role = 'alert';
+  toast.style.minWidth = '200px';
+  toast.style.padding = '0.75rem 1rem';
+  toast.style.marginBottom = '0.5rem';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  document.getElementById('toast-container').appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

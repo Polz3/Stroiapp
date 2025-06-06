@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Статистика — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="background-color: #000; color: #fff; min-height: 100vh;">
+  <h2 class="mb-4">Статистика</h2>
+
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Объекты</h5>
+        <p class="fs-4">12 (10 активных)</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Сотрудники</h5>
+        <p class="fs-4">27</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Инструменты на складе</h5>
+        <p class="fs-4">58</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Сумма расходов</h5>
+        <p class="fs-4">12 345 678 ₽</p>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Расходы по категориям</h5>
+        <canvas id="categoryChart" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-md-12">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Расходы по объектам</h5>
+        <canvas id="siteChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-md-12">
+      <div class="p-3 rounded-3 shadow" style="background-color: #111;">
+        <h5>Динамика расходов</h5>
+        <canvas id="dynamicChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow text-center" style="background-color: #111;">
+        <h6>Средняя закупка</h6>
+        <p class="fs-4">80 000 ₽</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow text-center" style="background-color: #111;">
+        <h6>Средняя зарплата</h6>
+        <p class="fs-4">50 000 ₽</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="p-3 rounded-3 shadow text-center" style="background-color: #111;">
+        <h6>Общая сумма</h6>
+        <p class="fs-4">2.150 млн ₽</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Категории расходов
+const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+new Chart(ctxCategory, {
+  type: 'doughnut',
+  data: {
+    labels: ['Закупки', 'Зарплата', 'Инструменты'],
+    datasets: [{
+      data: [50, 35, 15],
+      backgroundColor: ['#4285F4', '#34A853', '#FBBC05'],
+      borderColor: '#000',
+    }]
+  },
+  options: {
+    plugins: { legend: { labels: { color: '#fff' } } }
+  }
+});
+
+// Расходы по объектам
+const ctxSite = document.getElementById('siteChart').getContext('2d');
+new Chart(ctxSite, {
+  type: 'bar',
+  data: {
+    labels: ['Дом на ул. Лесной', 'Офисный центр', 'Коттедж'],
+    datasets: [{
+      label: 'Расходы',
+      data: [1200000, 900000, 750000],
+      backgroundColor: '#4285F4'
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#fff' } },
+      y: { ticks: { color: '#fff' } }
+    }
+  }
+});
+
+// Динамика расходов
+const ctxDynamic = document.getElementById('dynamicChart').getContext('2d');
+new Chart(ctxDynamic, {
+  type: 'line',
+  data: {
+    labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл'],
+    datasets: [{
+      label: 'Расходы',
+      data: [500000, 600000, 550000, 800000, 750000, 900000, 850000],
+      borderColor: '#34A853',
+      backgroundColor: 'transparent'
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#fff' } },
+      y: { ticks: { color: '#fff' } }
+    }
+  }
+});
+</script>
+{% endblock %}

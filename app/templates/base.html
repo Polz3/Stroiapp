@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Поддержка iPhone Web App -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="СтройКонтроль">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='icon.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='icon.png') }}">
+    <link rel="apple-touch-startup-image" href="{{ url_for('static', path='splash.png') }}" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="{{ url_for('static', path='splash.png') }}" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="{{ url_for('static', path='Splash_iPhone11.png') }}" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
+
+    <title>{% block title %}СтройКонтроль{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+
+    <!-- Ваши кастомные стили -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', path='css/style.css') }}"
+    />
+  </head>
+
+  <body class="d-flex bg-black text-white">
+
+    <!-- Sidebar -->
+    <nav id="sidebarMenu" class="collapse d-md-block bg-dark vh-100">
+      <div class="position-sticky pt-3 text-white">
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link text-white" href="/">Главная</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/sites">Объекты</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/expenses">Расходы</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/workers">Сотрудники</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/warehouse">Склад</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/tools">Инструменты</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/materials">Материалы</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/stats">Статистика</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/settings">Настройки</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="flex-grow-1">
+      <header class="navbar navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+          <button
+            class="navbar-toggler d-md-none"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu"
+            aria-label="Toggle navigation"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <a class="navbar-brand ms-2" href="/">СтройКонтроль</a>
+        </div>
+      </header>
+
+      <main class="container py-4" style="background-color: #000;">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <!-- Bootstrap JS Bundle (Popper включён) -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="{{ url_for('static', path='js/script.js') }}"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+          const token = localStorage.getItem('token');
+          const path = window.location.pathname;
+      
+          if (!token && path !== "/login" && path !== "/register") {
+              window.location.href = "/login";  // Перенаправляем на логин
+          }
+      
+          if (token && (path === "/login" || path === "/register" || path === "/register.html")) {
+              window.location.href = "/";  // Перенаправляем на главную
+          }
+      });
+      </script>               
+
+<script>
+  function authorizedFetch(url, options = {}) {
+  options.credentials = "include";  // ← обязательно для cookie
+  options.headers = options.headers || {};
+  return fetch(url, options);
+}
+
+  </script>
+  
+  </body>
+</html>

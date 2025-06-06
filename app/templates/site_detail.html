@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Объект — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="background-color: #000; color: #fff; min-height: 90vh;">
+  <h2 id="site-name" class="mb-4">Объект: {{ site.name }}</h2>
+
+  <div id="view-mode" class="p-4 rounded-3 mb-4" style="background-color: #111;">
+    <p><strong>Адрес:</strong> <span id="site-address">{{ site.address or "не указан" }}</span></p>
+    <p><strong>Подгруппа:</strong> <span id="site-subgroup">{{ site.subgroup.name if site.subgroup else "не указана" }}</span></p>
+
+    <div class="d-flex gap-2 mt-4">
+      <button class="btn border border-primary text-primary" id="edit-btn">Редактировать</button>
+      {% if not site.is_archived %}
+      <button class="btn border border-danger text-danger" id="archive-btn">Отправить в архив</button>
+      {% endif %}
+      <button class="btn border border-secondary text-secondary" id="delete-btn">Удалить объект</button>
+    </div>
+  </div>
+
+  <div id="edit-mode" class="p-4 rounded-3 mb-4 d-none" style="background-color: #111;">
+    <div class="mb-3">
+      <label for="name" class="form-label">Название</label>
+      <input type="text" class="form-control bg-dark text-white border-0" id="name" value="{{ site.name }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="address" class="form-label">Адрес</label>
+      <input type="text" class="form-control bg-dark text-white border-0" id="address" value="{{ site.address }}">
+    </div>
+    <div class="mb-3">
+      <label for="subgroup_id" class="form-label">Подгруппа</label>
+      <select class="form-select bg-dark text-white border-0" id="subgroup_id">
+        <option value="" {% if not site.subgroup_id %}selected{% endif %}>Без подгруппы</option>
+        {% for sg in subgroups %}
+          <option value="{{ sg.id }}" {% if sg.id == site.subgroup_id %}selected{% endif %}>{{ sg.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" id="save-btn">Сохранить</button>
+      <button class="btn btn-secondary" id="cancel-btn">Отмена</button>
+    </div>
+  </div>
+
+  <div class="p-4 rounded-3 mb-4" style="background-color: #111;">
+    <h4 class="mb-3">Расходы</h4>
+    {% if expenses %}
+      <ul class="list-group list-group-flush">
+        {% for e in expenses %}
+          <li class="list-group-item bg-dark text-white">
+            {{ e.date }} — {{ e.amount }}₽ — {{ e.comment or "без комментария" }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">Нет расходов для этого объекта.</p>
+    {% endif %}
+  </div>
+
+  <div class="p-4 rounded-3 mb-4" style="background-color: #111;">
+    <h4 class="mb-3">Зарплаты</h4>
+    {% if salaries %}
+      <ul class="list-group list-group-flush">
+        {% for s in salaries %}
+          <li class="list-group-item bg-dark text-white">
+            {{ s.date }} — {{ s.amount }}₽ — {{ s.comment or "зарплата" }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">Нет выданных зарплат для этого объекта.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div id="toast-container" style="position: fixed; top: 1rem; right: 1rem; z-index: 9999;"></div>
+
+<script>
+{{ site.id | tojson }}
+
+const viewMode = document.getElementById('view-mode');
+const editMode = document.getElementById('edit-mode');
+const editBtn = document.getElementById('edit-btn');
+const saveBtn = document.getElementById('save-btn');
+const cancelBtn = document.getElementById('cancel-btn');
+const archiveBtn = document.getElementById('archive-btn');
+const deleteBtn = document.getElementById('delete-btn');
+
+editBtn?.addEventListener('click', () => {
+  viewMode.classList.add('d-none');
+  editMode.classList.remove('d-none');
+});
+
+cancelBtn?.addEventListener('click', () => {
+  editMode.classList.add('d-none');
+  viewMode.classList.remove('d-none');
+});
+
+saveBtn?.addEventListener('click', async () => {
+  const name = document.getElementById('name').value;
+  const address = document.getElementById('address').value;
+  let subgroupId = document.getElementById('subgroup_id').value;
+  subgroupId = subgroupId ? parseInt(subgroupId) : null;
+
+  try {
+    const response = await authorizedFetch(`/api/sites/${siteId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, address, subgroup_id: subgroupId })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById('site-name').textContent = `Объект: ${data.name}`;
+      document.getElementById('site-address').textContent = data.address || 'не указан';
+      document.getElementById('site-subgroup').textContent = data.subgroup_name || 'не указана';
+      editMode.classList.add('d-none');
+      viewMode.classList.remove('d-none');
+      showToast('Изменения сохранены.');
+    } else {
+      showToast('Ошибка при сохранении', true);
+    }
+  } catch (error) {
+    showToast('Ошибка сети', true);
+  }
+});
+
+archiveBtn?.addEventListener('click', async () => {
+  if (confirm('Отправить объект в архив?')) {
+    try {
+      const response = await authorizedFetch(`/api/sites/${siteId}/archive`, { method: 'POST' });
+      if (response.ok) {
+        showToast('Объект отправлен в архив.');
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showToast('Ошибка архивирования', true);
+      }
+    } catch (error) {
+      showToast('Ошибка сети', true);
+    }
+  }
+});
+
+deleteBtn?.addEventListener('click', async () => {
+  if (confirm('Удалить объект без возможности восстановления?')) {
+    try {
+      const response = await authorizedFetch(`/api/sites/${siteId}`, { method: 'DELETE' });
+      if (response.ok) {
+        showToast('Объект удалён.');
+        setTimeout(() => window.location.href = '/sites', 1000);
+      } else {
+        showToast('Ошибка удаления', true);
+      }
+    } catch (error) {
+      showToast('Ошибка сети', true);
+    }
+  }
+});
+
+function showToast(message, isError = false) {
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white ${isError ? 'bg-danger' : 'bg-success'} border-0 show`;
+  toast.role = 'alert';
+  toast.style.minWidth = '200px';
+  toast.style.padding = '0.75rem 1rem';
+  toast.style.marginBottom = '0.5rem';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  document.getElementById('toast-container').appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

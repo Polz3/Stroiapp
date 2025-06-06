@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if site %}Редактировать «{{ site.name }}»{% else %}Добавить объект{% endif %} — СтройКонтроль
+{% endblock %}
+
+{% block content %}
+<div class="card p-4">
+  <h2 class="mb-4">{% if site %}Редактирование{% else %}Новый объект{% endif %}</h2>
+  <form method="post"
+        action="{{ url_for('form.update_site', site_id=site.id) if site else url_for('form.create_site') }}">
+    <div class="mb-3">
+      <label class="form-label">Название <span class="text-danger">*</span></label>
+      <input name="name" type="text" class="form-control" required
+             value="{{ site.name if site else '' }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Адрес</label>
+      <input name="address" type="text" class="form-control"
+             value="{{ site.address if site else '' }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Подгруппа</label>
+      <select name="subgroup_id" class="form-select">
+        <option value="">— нет —</option>
+        {% for sg in subgroups %}
+          <option value="{{ sg.id }}"
+                  {% if site and sg.id == site.subgroup_id %}selected{% endif %}>
+            {{ sg.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-success">
+      {% if site %}Сохранить{% else %}Создать{% endif %}
+    </button>
+    <a href="{{ url_for('pages.sites_page') }}" class="btn btn-link">Отмена</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Инструменты — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="container" style="background-color: #000; color: #fff; min-height: 90vh;">
+
+<h2 class="mb-4">Все инструменты</h2>
+<form method="get" action="/tools" id="filter-form" class="d-flex gap-2 mb-4">
+  <select name="site_id" id="site-filter" class="form-select bg-dark text-white border-0">
+    <option value="">Все объекты</option>
+    <option value="none" {% if selected_site is not none and selected_site=='none' %}selected{% endif %}>На складе</option>
+    {% for s in sites %}
+      <option value="{{ s.id }}" {% if selected_site==s.id %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="search" id="search-filter" placeholder="Поиск по названию" class="form-control bg-dark text-white border-0" value="{{ search }}">
+</form>
+
+<ul class="list-group">
+  {% for t in tools %}
+    <li class="list-group-item mb-2" style="background-color: #111; border: none; color: #fff;">
+      {{ t.name }}
+      {% if t.price %} — <span class="text-muted">{{ t.price }} ₽</span>{% endif %}
+      <span class="text-muted">({{ t.site.name if t.site else 'Склад' }})</span>
+    </li>
+  {% else %}
+    <li class="list-group-item bg-black text-white">Инструменты не найдены</li>
+  {% endfor %}
+</ul>
+
+</div>
+
+<script>
+const siteFilter = document.getElementById('site-filter');
+const searchFilter = document.getElementById('search-filter');
+const filterForm = document.getElementById('filter-form');
+
+siteFilter?.addEventListener('change', () => filterForm.submit());
+searchFilter?.addEventListener('input', () => {
+  clearTimeout(searchFilter.dataset.timeout);
+  searchFilter.dataset.timeout = setTimeout(() => filterForm.submit(), 500);
+});
+</script>
+{% endblock %}

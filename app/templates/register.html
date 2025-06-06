@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Создание аккаунта — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column justify-content-center align-items-center" style="min-height: 100vh;">
+  <div class="p-4 rounded-3 shadow" style="background-color: #111; width: 100%; max-width: 400px;">
+    
+    <!-- Логотип -->
+    <div class="text-center mb-3">
+      <img src="/static/img/logo_nobg.png" alt="СтройКонтроль" style="height: 64px;">
+    </div>
+
+    <h2 class="text-center mb-4 text-white">Создание аккаунта</h2>
+
+    <form id="registerForm" class="d-flex flex-column gap-3">
+      <div>
+        <label for="username" class="form-label text-white">Имя пользователя</label>
+        <input type="text" id="username" class="form-control bg-dark text-white border-0" required>
+      </div>
+      <div>
+        <label for="password" class="form-label text-white">Пароль</label>
+        <input type="password" id="password" class="form-control bg-dark text-white border-0" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Создать аккаунт</button>
+    </form>
+
+    <div class="text-center mt-3">
+      <a href="/login" class="text-secondary d-block" style="font-size: 0.9em;">Уже есть аккаунт? Войти</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById("registerForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (response.ok) {
+      window.location.href = "/login";
+    } else {
+      const data = await response.json();
+      alert(data.detail || "Ошибка регистрации");
+    }
+  });
+</script>
+{% endblock %}

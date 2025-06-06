@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Вход в аккаунт — СтройКонтроль{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column justify-content-center align-items-center" style="min-height: 100vh;">
+  <div class="p-4 rounded-3 shadow" style="background-color: #111; width: 100%; max-width: 400px;">
+    
+    <!-- Логотип -->
+    <div class="text-center mb-3">
+<img src="/static/img/logo_nobg.png" alt="СтройКонтроль" style="height: 72px;">
+    </div>
+
+    <h2 class="text-center mb-4 text-white">Вход в аккаунт</h2>
+
+    <form id="loginForm" class="d-flex flex-column gap-3">
+      <div>
+        <label for="username" class="form-label text-white">Логин</label>
+        <input type="text" id="username" class="form-control bg-dark text-white border-0" required>
+      </div>
+      <div>
+        <label for="password" class="form-label text-white">Пароль</label>
+        <input type="password" id="password" class="form-control bg-dark text-white border-0" required>
+      </div>
+      <input type="hidden" id="next" value="{{ next }}">
+      <button type="submit" class="btn btn-primary w-100">Войти</button>
+    </form>
+
+    <div class="text-center mt-3">
+  <a href="/register" class="text-secondary d-block" style="font-size: 0.9em;">Зарегистрироваться</a>
+  <a href="/forgot-password" class="text-secondary d-block" style="font-size: 0.9em;">Забыли пароль?</a>
+</div>
+</div>
+
+<script>
+  document.getElementById("loginForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const nextPage = document.getElementById("next").value || "/";
+
+    const response = await fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      window.location.href = nextPage;
+    } else {
+      alert(data.detail || "Ошибка входа");
+    }
+  });
+</script>
+{% endblock %}

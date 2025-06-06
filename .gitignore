@@ -1,0 +1,20 @@
+# База данных
+stroikontrol.db
+
+# Виртуальные окружения
+venv/
+venvs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

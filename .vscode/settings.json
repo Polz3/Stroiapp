@@ -1,0 +1,7 @@
+{
+    "python.defaultInterpreterPath": "C:\\venvs\\stroikontrol\\Scripts\\python.exe",
+    "terminal.integrated.env.windows": {
+        "VIRTUAL_ENV": "C:\\venvs\\stroikontrol",
+        "PATH": "C:\\venvs\\stroikontrol\\Scripts;${env:PATH}"
+    }
+}
