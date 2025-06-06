@@ -5,7 +5,7 @@ from typing import Optional
 class MaterialBase(BaseModel):
     name: str
     unit: Optional[str] = None
-    archived: bool = False
+    is_archived: bool = False
 
 
 class MaterialCreate(MaterialBase):
@@ -15,7 +15,7 @@ class MaterialCreate(MaterialBase):
 class MaterialUpdate(MaterialBase):
     name: Optional[str] = None
     unit: Optional[str] = None
-    archived: Optional[bool] = None
+    is_archived: Optional[bool] = None
 
 
 class Material(MaterialBase):
