@@ -1,20 +1,34 @@
-# База данных
-stroikontrol.db
-
-# Виртуальные окружения
-venv/
-venvs/
-
-# Python
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# IDE
-.vscode/
-.idea/
+# SQLite databases
+*.db
 
-# OS
+# Alembic cache
+alembic/versions/__pycache__/
+
+# Virtual environments
+venv/
+venvs/
+
+# VS Code
+.vscode/
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# Images (лишние скриншоты, картинки)
+app/static/*.png
+app/static/*.jpg
+app/static/*.jpeg
+
+# Проектные файлы (если случайно залил что-то не относящееся к проекту)
+*.bak
+*.tmp
+
+# Test files
+tests/__pycache__/
