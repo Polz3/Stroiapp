@@ -7,7 +7,7 @@ from .tool_transfer import ToolTransfer, ToolTransferCreate, ToolTransferUpdate
 class SiteBase(BaseModel):
     name: str
     address: Optional[str] = None
-    archived: bool = False
+    is_archived: bool = False
     subgroup_id: Optional[int] = None
 
 class SiteCreate(SiteBase):
