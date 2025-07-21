@@ -5,17 +5,25 @@ from urllib.parse import quote
 
 class RedirectUnauthorizedMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
-        # 🚫 Не трогаем саму страницу /login (чтобы не зациклить редирект)
-        if request.url.path.startswith("/login"):
+        path = request.url.path
+
+        # Разрешаем доступ к страницам логина и регистрации
+        if path.startswith("/login") or path.startswith("/register"):
+            return await call_next(request)
+
+        # Разрешаем все API-запросы и статические файлы
+        if path.startswith("/api/") or path.startswith("/static/"):
             return await call_next(request)
 
         # Выполняем основной запрос
         response = await call_next(request)
 
-        # Если ответ — HTML-страница с 401, перенаправляем на /login
+        # Редиректим только HTML-запросы с ошибкой 401
         is_html_page = request.headers.get("accept", "").startswith("text/html")
         if response.status_code == 401 and is_html_page:
-            next_path = quote(request.url.path)
+            from urllib.parse import quote
+            next_path = quote(path)
             return RedirectResponse(url=f"/login?next={next_path}")
 
         return response
+
