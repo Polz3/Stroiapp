@@ -7,7 +7,7 @@
     
     <!-- Логотип -->
     <div class="text-center mb-3">
-<img src="/static/img/logo_nobg.png" alt="СтройКонтроль" style="height: 72px;">
+      <img src="/static/img/logo_nobg.png" alt="СтройКонтроль" style="height: 72px;">
     </div>
 
     <h2 class="text-center mb-4 text-white">Вход в аккаунт</h2>
@@ -21,14 +21,18 @@
         <label for="password" class="form-label text-white">Пароль</label>
         <input type="password" id="password" class="form-control bg-dark text-white border-0" required>
       </div>
-      <input type="hidden" id="next" value="{{ next }}">
+
+      <!-- Скрытое поле next из query-параметра -->
+      <input type="hidden" id="next" value="{{ request.query_params.get('next', '/') }}">
+
       <button type="submit" class="btn btn-primary w-100">Войти</button>
     </form>
 
     <div class="text-center mt-3">
-  <a href="/register" class="text-secondary d-block" style="font-size: 0.9em;">Зарегистрироваться</a>
-  <a href="/forgot-password" class="text-secondary d-block" style="font-size: 0.9em;">Забыли пароль?</a>
-</div>
+      <a href="/register" class="text-secondary d-block" style="font-size: 0.9em;">Зарегистрироваться</a>
+      <a href="/forgot-password" class="text-secondary d-block" style="font-size: 0.9em;">Забыли пароль?</a>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -38,19 +42,24 @@
     const password = document.getElementById("password").value.trim();
     const nextPage = document.getElementById("next").value || "/";
 
-    const response = await fetch("/api/auth/login", {
+    const response = await fetch("/api/auth/login?next=" + encodeURIComponent(nextPage), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ username, password })
     });
 
-    const data = await response.json();
-
     if (response.ok) {
+      // Успешный вход — переходим на нужную страницу
       window.location.href = nextPage;
     } else {
-      alert(data.detail || "Ошибка входа");
+      // Обработка ошибки
+      try {
+        const data = await response.json();
+        alert(data.detail || "Ошибка входа");
+      } catch (err) {
+        alert("Ошибка при входе");
+      }
     }
   });
 </script>

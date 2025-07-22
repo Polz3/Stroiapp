@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex flex-column justify-content-center align-items-center" style="min-height: 100vh;">
   <div class="p-4 rounded-3 shadow" style="background-color: #111; width: 100%; max-width: 400px;">
-    
+
     <!-- Логотип -->
     <div class="text-center mb-3">
       <img src="/static/img/logo_nobg.png" alt="СтройКонтроль" style="height: 64px;">
@@ -42,8 +42,8 @@
       body: JSON.stringify({ username, password })
     });
 
-    if (response.ok) {
-      window.location.href = "/login";
+    if (response.redirected) {
+      window.location.href = response.url;
     } else {
       const data = await response.json();
       alert(data.detail || "Ошибка регистрации");

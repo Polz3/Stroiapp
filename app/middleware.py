@@ -1,29 +1,32 @@
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import RedirectResponse
 from starlette.requests import Request
-from starlette.responses import Response, RedirectResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 from urllib.parse import quote
 
-class RedirectUnauthorizedMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:
+class RedirectUnauthorizedMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive=receive)
+
         path = request.url.path
+        accept = request.headers.get("accept", "")
+        is_html = accept.startswith("text/html")
 
-        # Разрешаем доступ к страницам логина и регистрации
-        if path.startswith("/login") or path.startswith("/register"):
-            return await call_next(request)
+        allowed = path.startswith(("/login", "/register", "/static", "/api"))
 
-        # Разрешаем все API-запросы и статические файлы
-        if path.startswith("/api/") or path.startswith("/static/"):
-            return await call_next(request)
+        # 🧠 Проверяем, авторизован ли пользователь
+        user = request.user
+        is_authenticated = getattr(user, "is_authenticated", False)
 
-        # Выполняем основной запрос
-        response = await call_next(request)
-
-        # Редиректим только HTML-запросы с ошибкой 401
-        is_html_page = request.headers.get("accept", "").startswith("text/html")
-        if response.status_code == 401 and is_html_page:
-            from urllib.parse import quote
+        if not allowed and is_html and not is_authenticated:
             next_path = quote(path)
-            return RedirectResponse(url=f"/login?next={next_path}")
-
-        return response
-
+            response = RedirectResponse(url=f"/login?next={next_path}")
+            await response(scope, receive, send)
+        else:
+            await self.app(scope, receive, send)

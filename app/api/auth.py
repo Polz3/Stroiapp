@@ -8,7 +8,7 @@ from app.crud import user as crud_user
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from app.models.user import User
-from fastapi.responses import JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 
 SECRET_KEY = "secretkeystroikontrol"
 ALGORITHM = "HS256"
@@ -22,12 +22,29 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db_user = crud_user.get_user_by_username(db, user_data.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
+    
     new_user = crud_user.create_user(db, user_data.username, user_data.password)
-    return {"message": "User created successfully"}
 
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(user=new_user, expires_delta=access_token_expires)
+
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="lax",
+        secure=False
+    )
+    return response
 
 @router.post("/login")
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    user_data: UserLogin,
+    db: Session = Depends(get_db)
+):
     db_user = crud_user.get_user_by_username(db, user_data.username)
     if not db_user or not crud_user.verify_password(user_data.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid credentials")
@@ -35,14 +52,22 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(user=db_user, expires_delta=access_token_expires)
 
-    response = JSONResponse(content={"message": "Login successful"})
+    # Получаем ?next=... из query-параметров
+    next_url = request.query_params.get("next")
+
+    # Если передан next, делаем редирект на него
+    if next_url:
+        response = RedirectResponse(url=next_url, status_code=302)
+    else:
+        response = JSONResponse(content={"message": "Login successful"})
+
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False  # True — только при HTTPS
+        secure=False  # выставь True для HTTPS
     )
     return response
 
