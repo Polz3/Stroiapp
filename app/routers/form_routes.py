@@ -41,8 +41,18 @@ def create_site(
     return RedirectResponse("/sites", status_code=303)
 
 @router.post("/api/sites/{site_id}/archive", name="form.archive_site")
-def archive_site(site_id: int, db: Session = Depends(get_db)):
-    crud_site.archive_site(db, site_id)
+def archive_site(
+    site_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Archive a site belonging to the current user.  The CRUD helper expects the
+    calling user ID in order to correctly scope the operation.  Without
+    providing the user ID the function would raise a TypeError or fail to
+    locate the record.
+    """
+    crud_site.archive_site(db, site_id, current_user.id)
     return RedirectResponse("/sites", status_code=303)
 
 @router.post("/api/sites/{site_id}/restore", name="form.restore_site")
@@ -51,8 +61,16 @@ def restore_site(site_id: int, db: Session = Depends(get_db)):
     return RedirectResponse("/sites/archive", status_code=303)
 
 @router.post("/api/sites/{site_id}/delete", name="form.delete_site")
-def delete_site(site_id: int, db: Session = Depends(get_db)):
-    crud_site.delete_site(db, site_id)
+def delete_site(
+    site_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Permanently remove a site owned by the current user.  Pass the user's ID
+    through to the CRUD helper so it can verify ownership before deletion.
+    """
+    crud_site.delete_site(db, site_id, current_user.id)
     return RedirectResponse("/sites", status_code=303)
 
 
@@ -190,10 +208,8 @@ def delete_transfer(id: int, db: Session = Depends(get_db)):
     return RedirectResponse("/warehouse", status_code=303)
 
 # --- Архивирование ---
-@router.post("/api/sites/{site_id}/archive", name="form.archive_site")
-def archive_site(site_id: int, db: Session = Depends(get_db)):
-    crud_site.archive_site(db, site_id)
-    return RedirectResponse("/sites", status_code=303)
+# NOTE: duplicate handler removed; see the version defined above which accepts
+# the current user and passes the user ID into the CRUD helper.
 
 # --- Редактирование объекта ---
 @router.post("/api/sites/{site_id}", name="form.update_site")
@@ -207,19 +223,10 @@ def update_site(site_id: int,
     return RedirectResponse(f"/sites/{site_id}", status_code=303)
 
 # --- Возврат из архива ---
-@router.post("/api/sites/{site_id}/restore", name="form.restore_site")
-def restore_site(site_id: int, db: Session = Depends(get_db)):
-    site = crud_site.get_site(db, site_id)
-    if not site:
-        raise HTTPException(404, "Site not found")
-    site.is_archived = False
-    db.commit()
-    return RedirectResponse("/sites/archive", status_code=303)
+# NOTE: duplicate handler removed; the primary restore route is defined earlier.
 
 # --- Удаление объекта ---
-@router.post("/api/sites/{site_id}/delete", name="form.delete_site")
-def delete_site(site_id: int, db: Session = Depends(get_db)):
-    crud_site.delete_site(db, site_id)
-    return RedirectResponse("/sites", status_code=303)
+# NOTE: duplicate handler removed; see the version above which accepts
+# the current user and uses it to scope the deletion.
 
 

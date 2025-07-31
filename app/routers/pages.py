@@ -59,18 +59,8 @@ def sites_archive_page(request: Request, db: Session = Depends(get_db)):
     })
 
 
-@router.get("/sites/{site_id}", response_class=HTMLResponse, name="pages.site_detail")
-def site_detail(request: Request, site_id: int, edit: bool = False, db: Session = Depends(get_db)):
-    site = crud_site.get_site(db, site_id)
-    if not site:
-        raise HTTPException(404, "Site not found")
-    subgroups = crud_sg.get_subgroups(db)
-    return templates.TemplateResponse("site_detail.html", {
-        "request": request,
-        "site": site,
-        "subgroups": subgroups,
-        "edit": edit
-    })
+# The site detail route is defined below with additional context (expenses and salaries).
+# Remove this duplicate definition to avoid overriding the more complete handler.
 
 # --- Формы создания/редактирования объектов ---
 @router.get("/sites/create", response_class=HTMLResponse)
