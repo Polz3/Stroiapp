@@ -1,54 +1,50 @@
+from typing import Optional
+from jose import JWTError, jwt
 from starlette.authentication import (
-    AuthenticationBackend, AuthCredentials, UnauthenticatedUser
+    AuthenticationBackend, AuthCredentials, BaseUser, AuthenticationError
 )
 from starlette.requests import HTTPConnection
-from jose import JWTError, jwt
-from app.models.user import User
+from datetime import datetime
 from app.database.db import SessionLocal
+from app.crud import user as crud_user
+from app.models.models import User
 from app.core.config import settings
 
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = settings.ALGORITHM
+class SimpleUser(BaseUser):
+    def __init__(self, username: str, user_id: int):
+        self.username = username
+        self.user_id = user_id
 
-class SimpleUser(User):
     @property
-    def is_authenticated(self):
+    def is_authenticated(self) -> bool:
         return True
 
 class JWTAuthBackend(AuthenticationBackend):
     async def authenticate(self, conn: HTTPConnection):
-        if "cookie" not in conn.headers:
+        # Получаем куки из запроса
+        token = conn.cookies.get("access_token")
+        if not token:
             print("🚫 Нет cookies в запросе")
             return
 
-        token = conn.cookies.get("access_token")
-        print("🍪 Headers:", conn.headers)
-        print("🍪 Cookie:", token)
-
-        if not token:
-            print("🚫 Токен не найден в cookies")
-            return
-
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            user_id = payload.get("sub")
-            print("📥 user_id из токена:", user_id)
-        except JWTError as e:
-            print("❌ Ошибка при декодировании JWT:", str(e))
-            return
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id: str = payload.get("sub")
+            username: str = payload.get("username")
+            if user_id is None or username is None:
+                raise AuthenticationError("Invalid token payload")
 
-        if user_id is None:
-            print("🚫 В токене нет user_id (sub)")
-            return
+            print(f"📥 user_id из токена: {user_id}")
 
-        db = SessionLocal()
-        try:
-            user = db.query(User).filter(User.id == int(user_id)).first()
+            db = SessionLocal()
+            user: Optional[User] = crud_user.get_user_by_id(db, user_id)
             if not user:
-                print("❌ Пользователь не найден в базе")
-                return
+                raise AuthenticationError("User not found")
 
-            print("🔎 Найденный пользователь:", user.username)
-            return AuthCredentials(["authenticated"]), SimpleUser(**user.__dict__)
-        finally:
-            db.close()
+            print(f"🔎 Найденный пользователь: {user.username}")
+
+            return AuthCredentials(["authenticated"]), SimpleUser(username=user.username, user_id=user.id)
+
+        except JWTError:
+            print("⚠️ JWT Error")
+            raise AuthenticationError("Invalid JWT token")

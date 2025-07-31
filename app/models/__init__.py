@@ -6,4 +6,3 @@ from .models import (
     ToolTransfer,
     Expense,
 )
-from .user import User

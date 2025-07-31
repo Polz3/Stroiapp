@@ -8,7 +8,7 @@ from app.schemas import schemas
 from app.schemas.schemas import SiteCreate, SiteUpdate  # ← добавлено
 
 from app.api.auth import get_current_user
-from app.models.user import User
+from app.models.models import User
 from pydantic import BaseModel
 
 import app.crud.site      as crud_site

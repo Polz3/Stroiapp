@@ -5,7 +5,7 @@ from app.schemas.schemas import SiteCreate, Site, SiteUpdate  # Site = наш Si
 from app.crud import site as crud_site
 from app.database.db import get_db  # ← вот так
 from app.api.auth import get_current_user
-from app.models.user import User
+from app.models.models import User
 
 router = APIRouter(
     prefix="/api/sites",

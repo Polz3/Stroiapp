@@ -21,8 +21,11 @@ class RedirectUnauthorizedMiddleware:
         allowed = path.startswith(("/login", "/register", "/static", "/api"))
 
         # 🧠 Проверяем, авторизован ли пользователь
-        user = request.user
-        is_authenticated = getattr(user, "is_authenticated", False)
+        try:
+            user = request.user
+            is_authenticated = getattr(user, "is_authenticated", False)
+        except AssertionError:
+            is_authenticated = False
 
         if not allowed and is_html and not is_authenticated:
             next_path = quote(path)

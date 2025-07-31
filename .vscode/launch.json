@@ -13,7 +13,8 @@
         "--port", "8000"
       ],
       "console": "integratedTerminal",
-      "jinja": true
+      "jinja": true,
+      "cwd": "${workspaceFolder}"  // ✅ ВАЖНО!
     }
   ]
 }

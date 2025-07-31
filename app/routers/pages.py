@@ -17,7 +17,7 @@ import app.crud.tool as crud_tool
 import app.crud.tool_transfer as crud_tr
 
 from app.api.auth import get_current_user
-from app.models.user import User
+from app.models.models import User
 from typing import Annotated
 from app.api.auth import get_optional_user
 
@@ -220,7 +220,12 @@ def worker_detail(
 
 # --- Склад ---
 @router.get("/warehouse", response_class=HTMLResponse)
-def warehouse_page(request: Request, add: int = 0, db: Session = Depends(get_db)):
+def warehouse_page(
+    request: Request,
+    add: int = 0,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)   # <--- вот сюда
+):
     tools = crud_tool.get_all(db, user_id=current_user.id)
     transfers = crud_tr.get_all(db)
     return templates.TemplateResponse("warehouse.html", {

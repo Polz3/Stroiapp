@@ -2,6 +2,15 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from app.database.db import Base
 
+# Пользователи
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+
+
 # Подгруппы объектов
 class Subgroup(Base):
     __tablename__ = "subgroups"
@@ -13,6 +22,7 @@ class Subgroup(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", backref="subgroups")
 
+
 # Строительные объекты
 class Site(Base):
     __tablename__ = "sites"
@@ -20,9 +30,8 @@ class Site(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     address = Column(String, nullable=True)
-    is_archived = Column(Boolean, default=False)  # ← исправлено
+    is_archived = Column(Boolean, default=False)
     subgroup_id = Column(Integer, ForeignKey("subgroups.id"), nullable=True)
-    
 
     subgroup = relationship("Subgroup", back_populates="sites")
     expenses = relationship("Expense", back_populates="site")
@@ -44,7 +53,6 @@ class Site(Base):
     )
 
 
-
 # Сотрудники
 class Worker(Base):
     __tablename__ = "workers"
@@ -60,6 +68,7 @@ class Worker(Base):
     is_archived = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", backref="workers")
+
 
 # Инструменты
 class Tool(Base):
@@ -82,7 +91,7 @@ class Expense(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Float)
-    type = Column(String, index=True)              # 'purchase' или 'salary'
+    type = Column(String, index=True)  # 'purchase' или 'salary'
     comment = Column(String, nullable=True)
     date = Column(Date, default=func.current_date())
     site_id = Column(Integer, ForeignKey("sites.id"))
@@ -94,14 +103,14 @@ class Expense(Base):
     worker = relationship("Worker", back_populates="expenses")
 
 
-# Записи о зарплате
+# Зарплата
 class Salary(Base):
     __tablename__ = "salaries"
 
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Float)
     date = Column(Date, default=func.current_date())
-    comment = Column(String, nullable=True)  # ← Добавили это поле
+    comment = Column(String, nullable=True)
     worker_id = Column(Integer, ForeignKey("workers.id"))
     site_id = Column(Integer, ForeignKey("sites.id"))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

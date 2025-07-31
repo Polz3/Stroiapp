@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 
 # URL для SQLite базы данных
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///instance/database.db"
 
 # Создание движка
 engine = create_engine(
