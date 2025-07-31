@@ -25,6 +25,12 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     new_user = crud_user.create_user(db, user_data.username, user_data.password)
     access_token = create_access_token(user=new_user)
 
+    # Issue a redirect to the homepage and persist the auth token.
+    # Explicitly set the cookie path to "/" so that the JWT is sent on
+    # every request. Without specifying the path the browser will default
+    # it to the current route ("/api/auth/register"), which prevents the
+    # homepage and other pages from receiving the cookie, resulting in
+    # endless redirect loops after registration.
     response = RedirectResponse(url="/", status_code=302)
     response.set_cookie(
         key="access_token",
@@ -32,7 +38,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         httponly=True,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False
+        secure=False,
+        path="/"
     )
     return response
 
@@ -61,8 +68,10 @@ def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db))
 
 @router.post("/logout")
 def logout():
+    # Clear the JWT cookie on logout. Specify the same path used when
+    # setting the cookie so that it is properly removed in the browser.
     response = RedirectResponse(url="/login", status_code=302)
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", path="/")
     return response
 
 
