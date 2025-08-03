@@ -39,8 +39,8 @@ app.add_middleware(
 )
 
 # 🔐 Подключение аутентификации
-app.add_middleware(AuthenticationMiddleware, backend=JWTAuthBackend())
 app.add_middleware(RedirectUnauthorizedMiddleware)
+app.add_middleware(AuthenticationMiddleware, backend=JWTAuthBackend())
 
 # 🗂 Статические файлы и шаблоны
 BASE_DIR = Path(__file__).resolve().parent
