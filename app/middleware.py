@@ -16,7 +16,7 @@ class RedirectUnauthorizedMiddleware:
 
         path = request.url.path
         accept = request.headers.get("accept", "")
-        is_html = accept.startswith("text/html")
+        is_html = "text/html" in accept
 
         allowed = path.startswith(("/login", "/register", "/static", "/api"))
 
