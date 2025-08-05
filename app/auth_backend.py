@@ -44,7 +44,6 @@ class JWTAuthBackend(AuthenticationBackend):
             print(f"🔎 Найденный пользователь: {user.username}")
 
             return AuthCredentials(["authenticated"]), SimpleUser(username=user.username, user_id=user.id)
-
         except JWTError:
             print("⚠️ JWT Error")
             raise AuthenticationError("Invalid JWT token")
