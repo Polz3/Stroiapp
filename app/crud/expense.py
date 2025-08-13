@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.expense import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate
 from datetime import date as date_type
+from typing import Optional
 
 
 def get_expenses(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> list[Expense]:
@@ -14,8 +15,13 @@ def get_expenses(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> 
           .all()
     )
 
-def get_expense(db: Session, expense_id: int) -> Expense | None:
-    return db.query(Expense).filter(Expense.id == expense_id).first()
+
+def get_expense(db: Session, expense_id: int, user_id: Optional[int] = None) -> Expense | None:
+    query = db.query(Expense).filter(Expense.id == expense_id)
+    if user_id is not None:
+        query = query.filter(Expense.user_id == user_id)
+    return query.first()
+
 
 def create_expense(db: Session, amount: float, site_id: int | None, comment: str, date: date_type, user_id: int):
     db_exp = Expense(
@@ -31,8 +37,9 @@ def create_expense(db: Session, amount: float, site_id: int | None, comment: str
     db.refresh(db_exp)
     return db_exp
 
-def update_expense(db: Session, expense_id: int, expense_update: ExpenseUpdate) -> Expense | None:
-    db_expense = get_expense(db, expense_id)
+
+def update_expense(db: Session, expense_id: int, expense_update: ExpenseUpdate, user_id: Optional[int] = None) -> Expense | None:
+    db_expense = get_expense(db, expense_id, user_id=user_id)
     if not db_expense:
         return None
     data = expense_update.model_dump(exclude_unset=True)
@@ -42,13 +49,15 @@ def update_expense(db: Session, expense_id: int, expense_update: ExpenseUpdate) 
     db.refresh(db_expense)
     return db_expense
 
-def delete_expense(db: Session, expense_id: int) -> bool:
-    db_expense = get_expense(db, expense_id)
+
+def delete_expense(db: Session, expense_id: int, user_id: Optional[int] = None) -> bool:
+    db_expense = get_expense(db, expense_id, user_id=user_id)
     if not db_expense:
         return False
     db.delete(db_expense)
     db.commit()
     return True
+
 
 def get_expenses_by_type(db: Session, user_id: int, type: str, skip: int = 0, limit: int = 100) -> list[Expense]:
     return (

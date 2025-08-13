@@ -27,7 +27,10 @@ from app.routers.pages import router as pages_router
 from app.routers.form_routes import router as form_router
 from app.routers.worker import router as ui_worker_router  # ⬅️ Важно!
 
-app = FastAPI(title="СтройКонтроль")
+app = FastAPI(
+    title="СтройКонтроль",
+    redirect_slashes=False
+)
 
 # 📦 Подключение CORS, если нужно (например, для фронта)
 app.add_middleware(
@@ -48,16 +51,16 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # 🔌 API роутеры
-app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
-app.include_router(site_router, prefix="/api/sites", tags=["sites"])
-app.include_router(subgroup_router, prefix="/api/subgroups", tags=["subgroups"])
-app.include_router(worker_router, prefix="/api/workers", tags=["workers"])
-app.include_router(salary_router, prefix="/api/salaries", tags=["salaries"])
-app.include_router(purchase_router, prefix="/api/purchases", tags=["purchases"])
-app.include_router(expense_router, prefix="/api/expenses", tags=["expenses"])
-app.include_router(tool_router, prefix="/api/tools", tags=["tools"])
-app.include_router(tool_transfer_router, prefix="/api/tool_transfers", tags=["tool_transfers"])
-app.include_router(material_router, prefix="/api/materials", tags=["materials"])
+app.include_router(auth_router, tags=["auth"])
+app.include_router(site_router, tags=["sites"])
+app.include_router(subgroup_router, tags=["subgroups"])
+app.include_router(worker_router, tags=["workers"])
+app.include_router(salary_router, tags=["salaries"])
+app.include_router(purchase_router, tags=["purchases"])
+app.include_router(expense_router, tags=["expenses"])
+app.include_router(tool_router, tags=["tools"])
+app.include_router(tool_transfer_router, tags=["tool_transfers"])
+app.include_router(material_router, tags=["materials"])
 
 # 🌐 Интерфейсные маршруты
 app.include_router(pages_router)

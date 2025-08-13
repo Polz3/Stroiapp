@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from app.models.worker import Worker
 from app.schemas.worker import WorkerCreate, WorkerUpdate
 
-def create_worker(db: Session, worker: WorkerCreate) -> Worker:
-    db_worker = Worker(**worker.model_dump(), is_archived=False)
+def create_worker(db: Session, worker: WorkerCreate, user_id: int) -> Worker:
+    db_worker = Worker(**worker.model_dump(), user_id=user_id, is_archived=False)
     db.add(db_worker)
     db.commit()
     db.refresh(db_worker)
@@ -21,11 +21,15 @@ def get_workers(
         query = query.filter(Worker.is_archived == False)
     return query.offset(skip).limit(limit).all()
 
-def get_worker(db: Session, worker_id: int) -> Worker | None:
-    return db.query(Worker).filter(Worker.id == worker_id).first()
+def get_worker(db: Session, worker_id: int, user_id: int) -> Worker | None:
+    return (
+        db.query(Worker)
+        .filter(Worker.id == worker_id, Worker.user_id == user_id)
+        .first()
+    )
 
-def update_worker(db: Session, worker_id: int, worker_update: WorkerUpdate) -> Worker | None:
-    db_worker = get_worker(db, worker_id)
+def update_worker(db: Session, worker_id: int, worker_update: WorkerUpdate, user_id: int) -> Worker | None:
+    db_worker = get_worker(db, worker_id, user_id)
     if not db_worker:
         return None
     data = worker_update.model_dump(exclude_unset=True)
@@ -35,8 +39,8 @@ def update_worker(db: Session, worker_id: int, worker_update: WorkerUpdate) -> W
     db.refresh(db_worker)
     return db_worker
 
-def archive_worker(db: Session, worker_id: int) -> Worker | None:
-    db_worker = get_worker(db, worker_id)
+def archive_worker(db: Session, worker_id: int, user_id: int) -> Worker | None:
+    db_worker = get_worker(db, worker_id, user_id)
     if not db_worker:
         return None
     db_worker.is_archived = True
@@ -44,8 +48,8 @@ def archive_worker(db: Session, worker_id: int) -> Worker | None:
     db.refresh(db_worker)
     return db_worker
 
-def restore_worker(db: Session, worker_id: int) -> Worker | None:
-    db_worker = get_worker(db, worker_id)
+def restore_worker(db: Session, worker_id: int, user_id: int) -> Worker | None:
+    db_worker = get_worker(db, worker_id, user_id)
     if not db_worker:
         return None
     db_worker.is_archived = False
@@ -53,8 +57,8 @@ def restore_worker(db: Session, worker_id: int) -> Worker | None:
     db.refresh(db_worker)
     return db_worker
 
-def delete_worker(db: Session, worker_id: int) -> bool:
-    db_worker = get_worker(db, worker_id)
+def delete_worker(db: Session, worker_id: int, user_id: int) -> bool:
+    db_worker = get_worker(db, worker_id, user_id)
     if not db_worker:
         return False
     db.delete(db_worker)

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Form, Body, HTTPException
+from fastapi import APIRouter, Depends, Form, Body
 from starlette.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, date
 
 from app.database.db import get_db
 from app.schemas import schemas
-from app.schemas.schemas import SiteCreate, SiteUpdate  # ← добавлено
+from app.schemas.schemas import SiteCreate, SiteUpdate
 
 from app.api.auth import get_current_user
 from app.models.models import User
@@ -34,10 +34,10 @@ def create_site(
     address: str = Form(""),
     subgroup_id: int | None = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # ← добавить
+    current_user: User = Depends(get_current_user)
 ):
     site = SiteCreate(name=name, address=address, subgroup_id=subgroup_id)
-    crud_site.create_site(db, site, current_user.id)  # ← передаём user_id
+    crud_site.create_site(db, site, current_user.id)
     return RedirectResponse("/sites", status_code=303)
 
 @router.post("/api/sites/{site_id}/archive", name="form.archive_site")
@@ -46,12 +46,6 @@ def archive_site(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Archive a site belonging to the current user.  The CRUD helper expects the
-    calling user ID in order to correctly scope the operation.  Without
-    providing the user ID the function would raise a TypeError or fail to
-    locate the record.
-    """
     crud_site.archive_site(db, site_id, current_user.id)
     return RedirectResponse("/sites", status_code=303)
 
@@ -66,13 +60,8 @@ def delete_site(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Permanently remove a site owned by the current user.  Pass the user's ID
-    through to the CRUD helper so it can verify ownership before deletion.
-    """
     crud_site.delete_site(db, site_id, current_user.id)
     return RedirectResponse("/sites", status_code=303)
-
 
 # --- Подгруппы ---
 @router.post("/api/subgroups", name="form.create_subgroup")
@@ -89,7 +78,6 @@ def rename_subgroup(sg_id: int, name: str = Form(...), db: Session = Depends(get
 def delete_subgroup(sg_id: int, db: Session = Depends(get_db)):
     crud_sg.delete_subgroup(db, sg_id)
     return RedirectResponse("/sites", status_code=303)
-
 
 # --- Закупка ---
 @router.post("/api/expenses", name="form.create_expense")
@@ -111,7 +99,6 @@ def create_expense(
 
     return {"ok": True}
 
-
 # --- Зарплаты ---
 @router.post("/api/salaries", name="form.create_salary")
 def create_salary(
@@ -120,7 +107,8 @@ def create_salary(
     site_id: int | None = Form(None),
     comment: str = Form(""),
     form_date: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     if isinstance(form_date, str):
         parsed_date = datetime.strptime(form_date, "%Y-%m-%d").date()
@@ -128,23 +116,25 @@ def create_salary(
         parsed_date = datetime.today().date()
 
     salary_data = schemas.SalaryCreate(
-    amount=amount,
-    worker_id=worker_id,
-    site_id=site_id,
-    comment=comment,
-    date=parsed_date
-)
-    crud_sal.create_salary(db=db, salary=salary_data)
+        amount=amount,
+        worker_id=worker_id,
+        site_id=site_id,
+        comment=comment,
+        date=parsed_date
+    )
+    crud_sal.create_salary(db=db, salary=salary_data, user_id=current_user.id)
 
     return RedirectResponse("/", status_code=303)
 
-
-
 # --- Сотрудники ---
 @router.post("/api/workers")
-def create_worker(worker: schemas.WorkerCreate = Body(...), db: Session = Depends(get_db)):
-    new_worker = crud_w.create_worker(db, worker)
-    return new_worker  # возвращаем JSON (id, name, phone...)
+def create_worker(
+    worker: schemas.WorkerCreate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    new_worker = crud_w.create_worker(db, worker, user_id=current_user.id)
+    return new_worker
 
 @router.post("/api/workers/{id}")
 def update_worker(id: int,
@@ -174,9 +164,10 @@ def delete_worker(id: int, db: Session = Depends(get_db)):
 def create_tool(name: str = Form(...),
                 price: float | None = Form(None),
                 site_id: int | None = Form(None),
-                db: Session = Depends(get_db)):
+                db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)):
     crud_tool.create_tool(db, schemas.ToolCreate(
-        name=name, price=price, site_id=site_id
+        name=name, price=price, site_id=site_id, user_id=current_user.id
     ))
     return RedirectResponse("/tools", status_code=303)
 
@@ -185,20 +176,21 @@ def delete_tool(id: int, db: Session = Depends(get_db)):
     crud_tool.delete_tool(db, id)
     return RedirectResponse("/tools", status_code=303)
 
-
 # --- Перемещения инструментов ---
 @router.post("/api/tool-transfer")
 def transfer_tool(tool_id: int = Form(...),
                   from_site_id: int | None = Form(None),
                   to_site_id: int | None = Form(None),
                   date_value: date = Form(None),
-                  db: Session = Depends(get_db)):
+                  db: Session = Depends(get_db),
+                  current_user: User = Depends(get_current_user)):
     crud_tr.create_tool_transfer(db, schemas.ToolTransferCreate(
         tool_id=tool_id,
         from_site_id=from_site_id,
         to_site_id=to_site_id,
         comment="",
-        date_value=date_value or date.today()
+        date_value=date_value or date.today(),
+        user_id=current_user.id
     ))
     return RedirectResponse("/warehouse", status_code=303)
 
@@ -207,10 +199,6 @@ def delete_transfer(id: int, db: Session = Depends(get_db)):
     crud_tr.delete_tool_transfer(db, id)
     return RedirectResponse("/warehouse", status_code=303)
 
-# --- Архивирование ---
-# NOTE: duplicate handler removed; see the version defined above which accepts
-# the current user and passes the user ID into the CRUD helper.
-
 # --- Редактирование объекта ---
 @router.post("/api/sites/{site_id}", name="form.update_site")
 def update_site(site_id: int,
@@ -218,15 +206,6 @@ def update_site(site_id: int,
                 address: str = Form(""),
                 subgroup_id: int | None = Form(None),
                 db: Session = Depends(get_db)):
-    site_data = SiteCreate(name=name, address=address, subgroup_id=subgroup_id)
+    site_data = SiteUpdate(name=name, address=address, subgroup_id=subgroup_id)
     crud_site.update_site(db, site_id, site_data)
     return RedirectResponse(f"/sites/{site_id}", status_code=303)
-
-# --- Возврат из архива ---
-# NOTE: duplicate handler removed; the primary restore route is defined earlier.
-
-# --- Удаление объекта ---
-# NOTE: duplicate handler removed; see the version above which accepts
-# the current user and uses it to scope the deletion.
-
-

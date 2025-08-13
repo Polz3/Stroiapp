@@ -2,20 +2,18 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 
-
 # Схема для создания инструмента
 class ToolCreate(BaseModel):
     name: str
     quantity: int
     comment: Optional[str] = None
-
+    user_id: int   # добавлено
 
 # Схема для обновления инструмента
 class ToolUpdate(BaseModel):
     name: Optional[str] = None
     quantity: Optional[int] = None
     comment: Optional[str] = None
-
 
 # Схема для отображения инструмента
 class Tool(BaseModel):
@@ -28,7 +26,6 @@ class Tool(BaseModel):
     class Config:
         from_attributes = True
 
-
 # Схема для создания перемещения инструмента
 class ToolTransferCreate(BaseModel):
     tool_id: int
@@ -36,7 +33,7 @@ class ToolTransferCreate(BaseModel):
     to_site_id: Optional[int] = None    # None = склад
     comment: Optional[str] = None
     date: date
-
+    user_id: int   # добавлено
 
 # Схема для отображения перемещения инструмента
 class ToolTransfer(BaseModel):
