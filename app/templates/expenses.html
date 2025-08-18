@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block content %}
+{% block title %}Расходы — СтройКонтроль{% endblock %}
 
+{% block content %}
 <div class="container py-4">
   <h2 class="mb-4">Расходы и Зарплаты</h2>
 
@@ -23,105 +24,128 @@
   <!-- Блок данных -->
   <div id="expensesList"></div>
 </div>
+{% endblock %}
 
+{% block page_scripts %}
 <script>
-let allExpenses = [];
+document.addEventListener('DOMContentLoaded', () => {
+  let allExpenses = [];
 
-async function loadExpenses() {
-  const response = await authorizedFetch('/api/expenses');
-  if (response.status === 401) {
-    window.location.href = "/login";
-    return;
+  function showProblem(msg) {
+    const c = document.getElementById("expensesList");
+    c.innerHTML = `<div class="alert alert-danger">${msg}</div>`;
+    console.error(msg);
   }
 
-  if (response.ok) {
-    allExpenses = await response.json();
-    renderExpenses();
-  } else {
-    showToast('Ошибка загрузки расходов', true);
-  }
-}
-
-async function loadSites() {
-  const response = await authorizedFetch('/api/sites');
-  if (response.status === 401) {
-    window.location.href = "/login";
-    return;
-  }
-
-  if (response.ok) {
-    const sites = await response.json();
-    const filter = document.getElementById("siteFilter");
-    sites.forEach(site => {
-      const opt = document.createElement("option");
-      opt.value = site.id;
-      opt.textContent = site.name;
-      filter.appendChild(opt);
-    });
-  }
-}
-
-function renderExpenses() {
-  const siteId = document.getElementById("siteFilter").value;
-  const type = document.getElementById("typeFilter").value;
-  const container = document.getElementById("expensesList");
-  container.innerHTML = "";
-
-  const filtered = allExpenses.filter(e => {
-    if (siteId && e.site_id != siteId) return false;
-    if (type && e.type != type) return false;
-    return true;
-  });
-
-  if (!filtered.length) {
-    container.innerHTML = "<p class='text-muted'>Нет данных</p>";
-    return;
+  async function loadExpenses() {
+    try {
+      const response = await authorizedFetch('/api/expenses');
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!response.ok) {
+        showProblem(`Ошибка загрузки /api/expenses: ${response.status} ${response.statusText}`);
+        return;
+      }
+      allExpenses = await response.json();
+      renderExpenses();
+    } catch (e) {
+      showProblem(`Не удалось получить /api/expenses: ${e}`);
+    }
   }
 
-  const grouped = {};
-  for (const e of filtered) {
-    const date = e.date.split("T")[0];
-    if (!grouped[date]) grouped[date] = [];
-    grouped[date].push(e);
+  async function loadSites() {
+    try {
+      const response = await authorizedFetch('/api/sites');
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!response.ok) {
+        showProblem(`Ошибка загрузки /api/sites: ${response.status} ${response.statusText}`);
+        return;
+      }
+      const sites = await response.json();
+      const filter = document.getElementById("siteFilter");
+      sites.forEach(site => {
+        const opt = document.createElement("option");
+        opt.value = site.id;
+        opt.textContent = site.name;
+        filter.appendChild(opt);
+      });
+    } catch (e) {
+      showProblem(`Не удалось получить /api/sites: ${e}`);
+    }
   }
 
-  Object.keys(grouped).sort().reverse().forEach(date => {
-    const group = grouped[date];
-    const dayBlock = document.createElement("div");
-    dayBlock.classList.add("mb-4");
+  function renderExpenses() {
+    const siteId = document.getElementById("siteFilter").value;
+    const type = document.getElementById("typeFilter").value;
+    const container = document.getElementById("expensesList");
+    container.innerHTML = "";
 
-    const title = document.createElement("h5");
-    title.textContent = new Date(date).toLocaleDateString();
-    dayBlock.appendChild(title);
-
-    const list = document.createElement("ul");
-    list.className = "list-group list-group-flush";
-
-    group.forEach(item => {
-      const li = document.createElement("li");
-      li.className = "list-group-item bg-transparent text-white d-flex justify-content-between align-items-center";
-      li.innerHTML = `
-        <span>
-          ${item.type === 'purchase' ? '🛒' : '💸'}
-          ${item.comment || 'Без комментария'}
-          ${item.site_name ? ` | ${item.site_name}` : ''}
-        </span>
-        <span class="fw-bold">${item.amount.toFixed(2)} ₽</span>
-      `;
-      list.appendChild(li);
+    const filtered = allExpenses.filter(e => {
+      if (siteId && String(e.site_id) !== String(siteId)) return false;
+      if (type && e.type !== type) return false;
+      return true;
     });
 
-    dayBlock.appendChild(list);
-    container.appendChild(dayBlock);
-  });
-}
+    if (!filtered.length) {
+      container.innerHTML = "<p class='text-muted'>Нет данных</p>";
+      return;
+    }
 
-// Инициализация
-document.getElementById("siteFilter").addEventListener("change", renderExpenses);
-document.getElementById("typeFilter").addEventListener("change", renderExpenses);
+    // группировка по дате
+    const grouped = {};
+    for (const e of filtered) {
+      const raw = (e.date ?? "").toString();
+      const day = raw.includes("T") ? raw.split("T")[0] : raw;
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(e);
+    }
 
-loadSites();
-loadExpenses();
+    Object.keys(grouped).sort().reverse().forEach(date => {
+      const group = grouped[date];
+      const dayBlock = document.createElement("div");
+      dayBlock.classList.add("mb-4");
+
+      const title = document.createElement("h5");
+      const d = new Date(date);
+      title.textContent = isNaN(d) ? date : d.toLocaleDateString();
+      dayBlock.appendChild(title);
+
+      const list = document.createElement("ul");
+      list.className = "list-group list-group-flush";
+
+      group.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)).forEach(item => {
+        const li = document.createElement("li");
+        li.className = "list-group-item bg-transparent text-white d-flex justify-content-between align-items-center";
+
+        const amountNum = Number(item.amount);
+        const amountText = Number.isFinite(amountNum) ? amountNum.toFixed(2) : String(item.amount ?? '');
+
+        li.innerHTML = `
+          <span>
+            ${item.type === 'purchase' ? '🛒' : '💸'}
+            ${item.comment || 'Без комментария'}
+            ${item.site_name ? ` | ${item.site_name}` : ''}
+          </span>
+          <span class="fw-bold">${amountText} ₽</span>
+        `;
+        list.appendChild(li);
+      });
+
+      dayBlock.appendChild(list);
+      container.appendChild(dayBlock);
+    });
+  }
+
+  document.getElementById("siteFilter").addEventListener("change", renderExpenses);
+  document.getElementById("typeFilter").addEventListener("change", renderExpenses);
+
+  loadSites();
+  loadExpenses();
+});
 </script>
-
 {% endblock %}
