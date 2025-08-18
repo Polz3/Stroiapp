@@ -3,17 +3,19 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
+
 from app.core.config import settings
 from app.database.db import get_db
 from app.schemas.user import UserCreate, UserLogin
 from app.crud import user as crud_user
 from app.models.models import User
 
-SECRET_KEY = SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = ALGORITHM = settings.ALGORITHM 
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 дней
 
-router = APIRouter(tags=["auth"])
+# ✅ ВАЖНО: добавили префикс /api/auth
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register")
@@ -25,12 +27,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     new_user = crud_user.create_user(db, user_data.username, user_data.password)
     access_token = create_access_token(user=new_user)
 
-    # Issue a redirect to the homepage and persist the auth token.
-    # Explicitly set the cookie path to "/" so that the JWT is sent on
-    # every request. Without specifying the path the browser will default
-    # it to the current route ("/api/auth/register"), which prevents the
-    # homepage and other pages from receiving the cookie, resulting in
-    # endless redirect loops after registration.
+    # Ставим cookie на весь путь, чтобы избежать зацикливания после редиректа
     response = RedirectResponse(url="/", status_code=302)
     response.set_cookie(
         key="access_token",
@@ -61,27 +58,22 @@ def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db))
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
         secure=False,
-        path="/"   # <-- добавь это!
-)
+        path="/"
+    )
     return response
 
 
 @router.post("/logout")
 def logout():
-    # Clear the JWT cookie on logout. Specify the same path used when
-    # setting the cookie so that it is properly removed in the browser.
+    # Удаляем cookie на том же path, где ставили
     response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie("access_token", path="/")
     return response
 
 
-def create_access_token(user: User, expires_delta: timedelta = None):
+def create_access_token(user: User, expires_delta: timedelta | None = None) -> str:
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode = {
-        "sub": str(user.id),
-        "username": user.username,
-        "exp": expire
-    }
+    to_encode = {"sub": str(user.id), "username": user.username, "exp": expire}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -92,7 +84,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        user_id: str | None = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:

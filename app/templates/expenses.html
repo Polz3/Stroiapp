@@ -28,7 +28,7 @@
 let allExpenses = [];
 
 async function loadExpenses() {
-  const response = await authorizedFetch('/api/expenses/');
+  const response = await authorizedFetch('/api/expenses');
   if (response.status === 401) {
     window.location.href = "/login";
     return;
@@ -43,7 +43,7 @@ async function loadExpenses() {
 }
 
 async function loadSites() {
-  const response = await authorizedFetch('/api/sites/');
+  const response = await authorizedFetch('/api/sites');
   if (response.status === 401) {
     window.location.href = "/login";
     return;

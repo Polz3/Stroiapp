@@ -1,7 +1,7 @@
 # app/api/expense.py
 from fastapi import APIRouter, Depends, Body
 from sqlalchemy.orm import Session
-from datetime import datetime, date as date_type
+from datetime import datetime
 
 from app.database.db import get_db
 import app.crud.expense as crud_exp
@@ -12,13 +12,8 @@ from app.models.models import User
 router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
 # --- CREATE (закупка) вызывается с главной через JSON ---
-class PurchaseIn:
-    amount: float
-    site_id: int | None
-    comment: str
-    form_date: str
-
 @router.post("")
+@router.post("/")
 def create_expense(
     purchase: dict = Body(...),
     db: Session = Depends(get_db),
@@ -45,6 +40,7 @@ def create_expense(
     return {"ok": True}
 
 # --- READ (единый список для страницы «Расходы») ---
+@router.get("")
 @router.get("/")
 def list_expenses(
     site_id: int | None = None,
@@ -52,8 +48,10 @@ def list_expenses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    expenses = crud_exp.get_expenses(db, user_id=current_user.id)  # закупки
-    salaries = crud_sal.get_salaries(db, user_id=current_user.id)  # зарплаты
+    # закупки
+    expenses = crud_exp.get_expenses(db, user_id=current_user.id)
+    # зарплаты
+    salaries = crud_sal.get_salaries(db, user_id=current_user.id)
 
     rows: list[dict] = []
 
@@ -62,7 +60,7 @@ def list_expenses(
         rows.append({
             "id": e.id,
             "amount": e.amount,
-            "type": e.type or "purchase",
+            "type": (e.type or "purchase"),
             "comment": e.comment or "",
             "date": e.date.isoformat(),
             "site_id": e.site_id,

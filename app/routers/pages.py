@@ -101,7 +101,7 @@ def site_detail(
         "salaries": site_salaries
     })
 
-# --- Закупка ---
+# --- Закупка / Расходы ---
 @router.get("/expenses", response_class=HTMLResponse)
 def expenses_page(
     request: Request,
@@ -111,9 +111,19 @@ def expenses_page(
     type: str = "",
     search: str = ""
 ):
+    # Берём закупки и зарплаты текущего пользователя
     expenses = crud_exp.get_expenses(db, user_id=current_user.id)
     salaries = crud_sal.get_salaries(db, user_id=current_user.id)
 
+    # У закупок гарантируем наличие атрибута .type
+    for e in expenses:
+        # если в БД поле type пустое, считаем это закупкой
+        try:
+            e.type = e.type or "purchase"
+        except AttributeError:
+            e.type = "purchase"
+
+    # Оборачиваем зарплаты как "расходы" с type="salary"
     class SalaryAsExpense:
         def __init__(self, sal):
             self.id = sal.id
@@ -128,27 +138,34 @@ def expenses_page(
     salary_expenses = [SalaryAsExpense(s) for s in salaries]
     all_ops = expenses + salary_expenses
 
+    # Фильтр по типу
     if type == "purchase":
         all_ops = [op for op in all_ops if getattr(op, "type", "") == "purchase"]
     elif type == "salary":
         all_ops = [op for op in all_ops if getattr(op, "type", "") == "salary"]
 
+    # Фильтр по объекту
     if site_id.isdigit():
         site_id_int = int(site_id)
         all_ops = [op for op in all_ops if op.site_id == site_id_int]
     else:
         site_id_int = None
 
+    # Поиск по комментарию
     if search:
-        all_ops = [op for op in all_ops if search.lower() in (op.comment or "").lower()]
+        s = search.lower()
+        all_ops = [op for op in all_ops if s in (op.comment or "").lower()]
 
+    # Группировка по дате
     grouped = defaultdict(list)
     for op in all_ops:
         grouped[op.date].append(op)
 
+    # Внутри дня — по id (новые выше)
     for ops in grouped.values():
         ops.sort(key=lambda x: getattr(x, "id", 0), reverse=True)
 
+    # Сами дни — от новых к старым
     grouped = dict(sorted(grouped.items(), key=lambda x: x[0], reverse=True))
 
     sites = crud_site.get_sites(db, user_id=current_user.id)
