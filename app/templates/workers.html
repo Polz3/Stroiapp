@@ -75,6 +75,7 @@ saveWorkerBtn?.addEventListener('click', async () => {
   try {
     const response = await authorizedFetch('/api/workers', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, // <-- важно!
       body: JSON.stringify({ name, phone_number })
     });
 
