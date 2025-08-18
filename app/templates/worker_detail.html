@@ -6,7 +6,7 @@
 
 <div class="p-4 rounded-3 mb-4" style="background-color: #111;">
   <h2>{{ worker.name }}</h2>
-  <p><strong>Телефон:</strong> {{ worker.phone or 'не указан' }}</p>
+  <p><strong>Телефон:</strong> {{ worker.phone_number or 'не указан' }}</p>
   <p><strong>Комментарий:</strong> {{ worker.comment or '—' }}</p>
 
   <div class="d-flex gap-2 mt-3">

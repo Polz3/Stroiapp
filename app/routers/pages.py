@@ -164,8 +164,18 @@ def expenses_page(
 
 # --- Сотрудники ---
 @router.get("/workers", response_class=HTMLResponse, name="pages.workers_page")
-def workers_page(request: Request):
-    return templates.TemplateResponse("workers.html", {"request": request})
+def workers_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    workers = crud_worker.get_workers(db, user_id=current_user.id)
+    sites = crud_site.get_sites(db, user_id=current_user.id)
+    return templates.TemplateResponse("workers.html", {
+        "request": request,
+        "workers": workers,
+        "sites": sites
+    })
 
 @router.get("/workers/{worker_id}", response_class=HTMLResponse, name="pages.worker_detail")
 def worker_detail(

@@ -23,20 +23,29 @@ def get_expense(db: Session, expense_id: int, user_id: Optional[int] = None) -> 
     return query.first()
 
 
-def create_expense(db: Session, amount: float, site_id: int | None, comment: str, date: date_type, user_id: int):
+def create_expense(
+    db: Session,
+    amount: float,
+    site_id: int | None,
+    comment: str,
+    date,
+    user_id: int,
+    type: str = "purchase",
+    worker_id: int | None = None
+):
     db_exp = Expense(
         amount=amount,
         site_id=site_id,
         comment=comment,
         date=date,
-        type="purchase",
-        user_id=user_id
+        user_id=user_id,
+        type=type,
+        worker_id=worker_id
     )
     db.add(db_exp)
     db.commit()
     db.refresh(db_exp)
     return db_exp
-
 
 def update_expense(db: Session, expense_id: int, expense_update: ExpenseUpdate, user_id: Optional[int] = None) -> Expense | None:
     db_expense = get_expense(db, expense_id, user_id=user_id)
