@@ -20,8 +20,12 @@ def get_salary(db: Session, salary_id: int, user_id: int) -> Salary | None:
         .first()
     )
 
-def create_salary(db: Session, salary: SalaryCreate, user_id: int, site_id: Optional[int] = None) -> Salary:
-    db_sal = Salary(**salary.model_dump(), user_id=user_id, site_id=site_id)
+def create_salary(db: Session, salary: SalaryCreate, user_id: int) -> Salary:
+    # site_id (если есть) уже придёт внутри payload (salary)
+    data = salary.model_dump()
+    data["user_id"] = user_id
+
+    db_sal = Salary(**data)
     db.add(db_sal)
     db.commit()
     db.refresh(db_sal)

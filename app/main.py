@@ -46,7 +46,9 @@ app.add_middleware(AuthenticationMiddleware, backend=JWTAuthBackend())
 # 🗂 Статика и шаблоны
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+app.state.templates = templates   # ✅ сохраняем в state
 
 # 🔌 API
 app.include_router(auth_router, tags=["auth"])
