@@ -138,7 +138,7 @@ async function createWorker() {
 
   const payload = { name: name.trim() };
   if (phone.trim()) {
-    payload.phone = phone.trim();
+    payload.phone_number = phone.trim();
   }
 
   const response = await authorizedFetch("/api/workers", {

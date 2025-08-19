@@ -1,5 +1,5 @@
 # app/api/worker.py
-from fastapi import APIRouter, Depends, HTTPException, Body, Form
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 
 from app.database.db import get_db
@@ -19,6 +19,7 @@ def read_workers(
 ):
     return crud_worker.get_workers(db, user_id=current_user.id)
 
+
 # --- Получить одного сотрудника ---
 @router.get("/{worker_id}", response_model=WorkerOut)
 def read_worker(
@@ -26,33 +27,24 @@ def read_worker(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    w = crud_worker.get_worker(db, worker_id)
-    if not w or w.user_id != current_user.id:
+    w = crud_worker.get_worker(db, worker_id, current_user.id)
+    if not w:
         raise HTTPException(status_code=404, detail="Worker not found")
     return w
 
-# --- Создать сотрудника (поддержка JSON и form-data) ---
-@router.post("")
+
+# --- Создать сотрудника ---
+@router.post("", response_model=WorkerOut)
 @router.post("/", response_model=WorkerOut)
 def create_worker(
-    payload: WorkerCreate | None = Body(default=None),
-    # альтернативный путь: если придёт form-data вместо JSON
-    name: str | None = Form(default=None),
-    phone_number: str | None = Form(default=None),
+    payload: WorkerCreate = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Если прислали JSON — используем его.
-    if payload is None:
-        # Если JSON не пришёл, собираем из формы (name обязателен)
-        if not name:
-            raise HTTPException(status_code=422, detail="name is required")
-        payload = WorkerCreate(name=name, phone_number=phone_number)
-
-    worker = crud_worker.create_worker(
-        db,
+    # привести к аккуратному виду
+    payload = WorkerCreate(
         name=payload.name.strip(),
         phone_number=(payload.phone_number or "").strip() or None,
-        user_id=current_user.id,
     )
+    worker = crud_worker.create_worker(db, payload, user_id=current_user.id)
     return worker

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.salary import Salary
 from app.schemas.salary import SalaryCreate, SalaryUpdate
+from typing import Optional
 
 def get_salaries(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> list[Salary]:
     return (
@@ -19,8 +20,8 @@ def get_salary(db: Session, salary_id: int, user_id: int) -> Salary | None:
         .first()
     )
 
-def create_salary(db: Session, salary: SalaryCreate, user_id: int) -> Salary:
-    db_sal = Salary(**salary.model_dump(), user_id=user_id)
+def create_salary(db: Session, salary: SalaryCreate, user_id: int, site_id: Optional[int] = None) -> Salary:
+    db_sal = Salary(**salary.model_dump(), user_id=user_id, site_id=site_id)
     db.add(db_sal)
     db.commit()
     db.refresh(db_sal)

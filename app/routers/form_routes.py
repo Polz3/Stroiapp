@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, Body
+from fastapi import APIRouter, Depends, Form, Body, HTTPException, Request
 from starlette.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, date
@@ -101,29 +101,70 @@ def create_expense(
 
 # --- Зарплаты ---
 @router.post("/api/salaries", name="form.create_salary")
-def create_salary(
-    amount: float = Form(...),
-    worker_id: int = Form(...),
-    site_id: int | None = Form(None),
-    comment: str = Form(""),
-    form_date: str = Form(...),
+async def create_salary(
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    if isinstance(form_date, str):
-        parsed_date = datetime.strptime(form_date, "%Y-%m-%d").date()
+    # 0) Получаем данные из тела запроса
+    ct = request.headers.get("content-type", "")
+    if "application/json" in ct:
+        data = await request.json()
     else:
-        parsed_date = datetime.today().date()
+        form = await request.form()
+        data = dict(form)
 
+    # 1) Достаём поля как строки (если нет — пустые)
+    amount_raw    = str(data.get("amount", "")).strip()
+    worker_raw    = str(data.get("worker_id", "")).strip()
+    site_raw      = str(data.get("site_id", "")).strip()
+    comment       = str(data.get("comment", "")).strip()
+    form_date_raw = str(data.get("form_date", "")).strip()
+
+    # 2) Валидация / нормализация
+    # сумма
+    try:
+        amount = float(amount_raw.replace(",", "."))
+    except Exception:
+        raise HTTPException(status_code=422, detail=f"Некорректная сумма: {amount_raw!r}")
+
+    # сотрудник
+    try:
+        worker_id = int(worker_raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail=f"Некорректный сотрудник: {worker_raw!r}")
+
+    # объект (может быть пустым)
+    site_id = None
+    if site_raw:
+        try:
+            site_id = int(site_raw)
+        except Exception:
+            raise HTTPException(status_code=422, detail=f"Некорректный объект: {site_raw!r}")
+
+    # дата
+    try:
+        parsed_date = datetime.strptime(form_date_raw, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=422, detail=f"Некорректная дата: {form_date_raw!r}")
+
+    # 3) Собираем pydantic-схему (БЕЗ site_id!)
     salary_data = schemas.SalaryCreate(
         amount=amount,
         worker_id=worker_id,
-        site_id=site_id,
         comment=comment,
-        date=parsed_date
+        date=parsed_date,
     )
-    crud_sal.create_salary(db=db, salary=salary_data, user_id=current_user.id)
 
+    # 4) Записываем в БД — site_id передаём отдельным аргументом
+    crud_sal.create_salary(
+        db=db,
+        salary=salary_data,
+        user_id=current_user.id,
+        site_id=site_id
+    )
+
+    # 5) Редиректим на главную
     return RedirectResponse("/", status_code=303)
 
 # --- Сотрудники ---
