@@ -1,24 +1,38 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from pathlib import Path
 from typing import Generator
 
-# URL для SQLite базы данных
-SQLALCHEMY_DATABASE_URL = "sqlite:///instance/database.db"
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, Session, declarative_base
 
-# Создание движка
+# === Абсолютный путь к БД + автосоздание каталога instance ===
+# BASE_DIR → папка app/
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_DIR = (BASE_DIR / ".." / "instance").resolve()
+DB_DIR.mkdir(parents=True, exist_ok=True)
+
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{(DB_DIR / 'database.db').as_posix()}"
+
+# === Движок SQLAlchemy ===
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Только для SQLite
+    connect_args={"check_same_thread": False},  # для SQLite в одном процессе
+    pool_pre_ping=True,                         # живой коннект перед запросом
 )
 
-# Создание фабрики сессий
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Рекомендуемые PRAGMA для снижения блокировок и подвисаний записи
+with engine.connect() as conn:
+    try:
+        conn.execute(text("PRAGMA journal_mode=WAL;"))
+        conn.execute(text("PRAGMA busy_timeout=5000;"))
+    except Exception:
+        # На некоторых платформах PRAGMA могут быть недоступны — просто пропускаем
+        pass
 
-# Базовый класс моделей
+# === Сессии и базовый класс ===
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Зависимость FastAPI — получение сессии БД
+# === Зависимость FastAPI — сессия БД ===
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
@@ -26,16 +40,14 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
-
 def create_db() -> None:
     """
-    Создает все таблицы, описанные в моделях SQLAlchemy.
-    При этом удаляет старые таблицы и создаёт схему заново.
+    Пере-создаёт схему БД на основе моделей SQLAlchemy.
+    ВНИМАНИЕ: удаляет таблицы (drop_all) — используйте только для локальных тестов!
+    Для сервера применяйте миграции Alembic: `alembic upgrade head`.
     """
     # Импортируем модели, чтобы зарегистрировать их в metadata
-    import app.models.models     # определяет Subgroup, Site, Material, Worker, Tool, Expense, ToolTransfer
-    import app.models.salary     # определяет модель Salary
+    import app.models.models     # Subgroup, Site, Material, Worker, Tool, Expense, ToolTransfer
 
-    # Удаляем старые таблицы (если они существуют) и создаём новые
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
