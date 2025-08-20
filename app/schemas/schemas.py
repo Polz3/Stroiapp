@@ -20,7 +20,7 @@ class Site(SiteBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для подгруппы
 class SubgroupBase(BaseModel):
@@ -33,7 +33,7 @@ class Subgroup(SubgroupBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для инструмента
 class ToolBase(BaseModel):
@@ -51,7 +51,7 @@ class Tool(ToolBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для работника
 class WorkerBase(BaseModel):
@@ -68,7 +68,7 @@ class Worker(WorkerBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для материала
 class MaterialBase(BaseModel):
@@ -86,7 +86,7 @@ class Material(MaterialBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для расхода
 class ExpenseBase(BaseModel):
@@ -105,7 +105,7 @@ class Expense(ExpenseBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для закупки
 class PurchaseBase(BaseModel):
@@ -124,7 +124,7 @@ class Purchase(PurchaseBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # Схема для зарплаты
 class SalaryBase(BaseModel):
@@ -143,4 +143,4 @@ class Salary(SalaryBase):
     id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
